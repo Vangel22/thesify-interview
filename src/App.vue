@@ -1,16 +1,16 @@
 <template>
-  <HelloWorld />
+  <ArticleList />
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
 import "./index.css";
-import HelloWorld from "./components/HelloWorld.vue";
+import ArticleList from "./components/ArticleList.vue";
 
 export default defineComponent({
   name: "App",
   components: {
-    HelloWorld,
+    ArticleList,
   },
 });
 </script>
