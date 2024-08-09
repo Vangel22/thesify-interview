@@ -1,6 +1,6 @@
 <template>
   <div
-    class="border max-w-sm rounded overflow-hidden shadow-lg flex flex-col h-full"
+    class="border max-w-screen rounded overflow-hidden shadow-lg flex flex-col h-full"
   >
     <div class="px-6 py-4 flex-grow">
       <div class="font-bold text-xl mb-2">{{ title }}</div>
