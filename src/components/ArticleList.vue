@@ -1,4 +1,24 @@
 <template>
+  <div class="flex justify-center items-center my-4 space-x-4">
+    <div class="relative flex items-center w-[380px]">
+      <img
+        src="../assets/magnify.svg"
+        alt="magnify icon"
+        class="absolute left-3 w-5 h-5"
+      />
+      <input
+        v-model="searchQuery"
+        @input="handleInput"
+        type="text"
+        placeholder="Search for articles"
+        :class="{
+          'pl-10 pr-4 py-2 border rounded w-full': true,
+          'cursor-not-allowed': articles.length === 0,
+          'cursor-text': articles.length > 0,
+        }"
+      />
+    </div>
+  </div>
   <div class="flex flex-wrap -mx-2">
     <div
       v-for="article in articles"
@@ -43,10 +63,14 @@ export default defineComponent({
     ArticleCard,
   },
   setup() {
+    const searchQuery = ref<String>("");
     const articles = ref<Article[]>([]);
 
     const fetchArticles = async () => {
-      const res = await axios.get(`https://api.openalex.org/works`);
+      const query = searchQuery.value.trim().toLowerCase();
+      const res = await axios.get(
+        `https://api.openalex.org/works?search=${encodeURIComponent(query)}`
+      );
       const dataFetched = res.data.results.map((item: any) => ({
         id: item.id,
         title: item.title,
@@ -63,13 +87,19 @@ export default defineComponent({
       articles.value = dataFetched;
     };
 
+    const handleInput = () => {
+      fetchArticles();
+    };
+
     onMounted(() => {
       fetchArticles();
     });
 
     return {
+      searchQuery,
       articles,
       fetchArticles,
+      handleInput,
     };
   },
 });
