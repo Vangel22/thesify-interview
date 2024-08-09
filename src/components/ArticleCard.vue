@@ -27,6 +27,26 @@
         #{{ concept }}
       </span>
     </div>
+
+    <div
+      @click="toggleFavorite"
+      class="flex justify-center items-center gap-2 py-2 cursor-pointer bg-gray-100"
+    >
+      <span>{{
+        isFavorite
+          ? "Remove from Favorite Collection"
+          : "Add to Favorite Collection"
+      }}</span>
+      <img
+        :src="
+          isFavorite
+            ? require('@/assets/star-filled.svg')
+            : require('@/assets/star.svg')
+        "
+        alt="star icon"
+        class="w-10 h-10"
+      />
+    </div>
   </div>
 </template>
 
@@ -56,6 +76,19 @@ export default defineComponent({
       type: Array as PropType<{ display_name: string }[]>,
       required: true,
     },
+    isFavorite: {
+      type: Boolean,
+      required: true,
+    },
+  },
+  setup(props, { emit }) {
+    const toggleFavorite = () => {
+      emit("toggle-favorite", props.id);
+    };
+
+    return {
+      toggleFavorite,
+    };
   },
 });
 </script>

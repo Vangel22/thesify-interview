@@ -1,38 +1,42 @@
 <template>
-  <div class="flex justify-center items-center my-4 space-x-4">
-    <div class="relative flex items-center w-[380px]">
-      <img
-        src="../assets/magnify.svg"
-        alt="magnify icon"
-        class="absolute left-3 w-5 h-5"
-      />
-      <input
-        v-model="searchQuery"
-        @input="handleInput"
-        type="text"
-        placeholder="Search for articles"
-        :class="{
-          'pl-10 pr-4 py-2 border rounded w-full': true,
-          'cursor-not-allowed': articles.length === 0,
-          'cursor-text': articles.length > 0,
-        }"
-      />
-    </div>
-  </div>
-  <div class="flex flex-wrap -mx-2">
-    <div
-      v-for="article in articles"
-      :key="article.id"
-      class="w-full md:w-1/3 px-2 mb-4"
-    >
-      <div class="flex flex-col h-full">
-        <ArticleCard
-          :id="article.id"
-          :title="article.title"
-          :summary="article.abstract"
-          :authors="article.authors"
-          :concepts="article.concepts.slice(0, 6)"
+  <div class="container mx-auto p-4">
+    <div class="flex justify-center items-center my-4 space-x-4">
+      <div class="relative flex items-center w-[380px]">
+        <img
+          src="../assets/magnify.svg"
+          alt="magnify icon"
+          class="absolute left-3 w-5 h-5"
         />
+        <input
+          v-model="searchQuery"
+          @input="handleInput"
+          type="text"
+          placeholder="Search for articles"
+          :class="{
+            'pl-10 pr-4 py-2 border rounded w-full': true,
+            'cursor-not-allowed': articles.length === 0,
+            'cursor-text': articles.length > 0,
+          }"
+        />
+      </div>
+    </div>
+    <div class="flex flex-wrap -mx-2">
+      <div
+        v-for="article in articles"
+        :key="article.id"
+        class="w-full md:w-1/3 px-2 mb-4"
+      >
+        <div class="flex flex-col h-full">
+          <ArticleCard
+            :id="article.id"
+            :title="article.title"
+            :summary="article.abstract"
+            :authors="article.authors"
+            :concepts="article.concepts.slice(0, 6)"
+            :isFavorite="article.isFavorite"
+            @toggle-favorite="toggleFavorite"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -65,6 +69,9 @@ export default defineComponent({
   setup() {
     const searchQuery = ref<String>("");
     const articles = ref<Article[]>([]);
+    const favorites = ref<Article[]>(
+      JSON.parse(localStorage.getItem("favorites") ?? "[]")
+    );
 
     const fetchArticles = async () => {
       const query = searchQuery.value.trim().toLowerCase();
@@ -82,6 +89,7 @@ export default defineComponent({
           ? item.authorships.map((data: any) => data.author.display_name)
           : [],
         publicationDate: new Date(item.publication_date),
+        isFavorite: favorites.value.some((fav: Article) => fav.id === item.id), // if found in favorites i toggle it here
       }));
 
       articles.value = dataFetched;
@@ -89,6 +97,29 @@ export default defineComponent({
 
     const handleInput = () => {
       fetchArticles();
+    };
+
+    const toggleFavorite = (articleId: string) => {
+      // this articleId is for the clicked article
+      const articleIndex = articles.value.findIndex(
+        (article: Article) => article.id === articleId
+      );
+      const foundArticle = articles.value[articleIndex];
+      if (articleIndex !== -1) {
+        // this means article was not found
+        articles.value[articleIndex].isFavorite = !foundArticle.isFavorite;
+        // make the status of the article as favorite or not
+
+        if (foundArticle.isFavorite) {
+          favorites.value.push(foundArticle);
+        } else {
+          favorites.value = favorites.value.filter(
+            (article) => article.id !== articleId
+          );
+        }
+      }
+
+      localStorage.setItem("favorites", JSON.stringify(favorites.value));
     };
 
     onMounted(() => {
@@ -100,6 +131,7 @@ export default defineComponent({
       articles,
       fetchArticles,
       handleInput,
+      toggleFavorite,
     };
   },
 });
