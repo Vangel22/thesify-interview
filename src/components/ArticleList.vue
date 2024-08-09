@@ -14,15 +14,28 @@
           placeholder="Search for articles"
           :class="{
             'pl-10 pr-4 py-2 border rounded w-full': true,
-            'cursor-not-allowed': articles.length === 0,
-            'cursor-text': articles.length > 0,
+            'cursor-not-allowed': filteredArticles.length === 0,
+            'cursor-text': filteredArticles.length > 0,
           }"
         />
       </div>
+
+      <select
+        v-model="filter"
+        @change="filterArticles"
+        class="border rounded px-4 py-2"
+      >
+        <option value="all">All Articles</option>
+        <option value="favorites">Favorites</option>
+      </select>
+    </div>
+
+    <div v-if="filteredArticles.length === 0">
+      <NoData msg="No articles found." />
     </div>
     <div class="flex flex-wrap -mx-2">
       <div
-        v-for="article in articles"
+        v-for="article in filteredArticles"
         :key="article.id"
         class="w-full md:w-1/3 px-2 mb-4"
       >
@@ -46,6 +59,7 @@
 import axios from "axios";
 import { defineComponent, onMounted, ref } from "vue";
 import ArticleCard from "./ArticleCard.vue";
+import NoData from "./NoData.vue";
 
 interface Concept {
   display_name: string;
@@ -65,6 +79,7 @@ export default defineComponent({
   name: "ArticleList",
   components: {
     ArticleCard,
+    NoData,
   },
   setup() {
     const searchQuery = ref<String>("");
@@ -72,6 +87,25 @@ export default defineComponent({
     const favorites = ref<Article[]>(
       JSON.parse(localStorage.getItem("favorites") ?? "[]")
     );
+    const filter = ref("all");
+    const filteredArticles = ref<Article[]>([]);
+
+    const searchInArticle = (article: Article, query: string): boolean => {
+      const lowerCaseQuery = query.toLowerCase();
+      const titleMatch = article.title?.toLowerCase().includes(lowerCaseQuery);
+      const authorMatch = article.authors?.some((author) =>
+        author.toLowerCase().includes(lowerCaseQuery)
+      );
+      // here i have a problem with the date format,
+      // somehow the date for favorites is ISO string
+      // and the articles have new Date type string
+      const dateMatch = article.publicationDate
+        .toString()
+        .toLowerCase()
+        .includes(lowerCaseQuery);
+
+      return titleMatch || authorMatch || dateMatch;
+    };
 
     const fetchArticles = async () => {
       const query = searchQuery.value.trim().toLowerCase();
@@ -93,6 +127,30 @@ export default defineComponent({
       }));
 
       articles.value = dataFetched;
+      filterArticles(); // display the data according to the filter
+    };
+
+    const fetchFavorites = () => {
+      const query = searchQuery.value.trim().toLowerCase();
+
+      const filteredFavoriteArticles = favorites.value.filter((f) =>
+        searchInArticle(f, query)
+      );
+      filteredArticles.value = filteredFavoriteArticles;
+    };
+
+    const filterArticles = () => {
+      if (filter.value === "favorites") {
+        const storedFavorites = JSON.parse(
+          localStorage.getItem("favorites") ?? "[]"
+        );
+        favorites.value = storedFavorites;
+        fetchFavorites();
+      } else {
+        filteredArticles.value = articles.value.filter((article) =>
+          searchInArticle(article, searchQuery.value.trim())
+        );
+      }
     };
 
     const handleInput = () => {
@@ -120,16 +178,22 @@ export default defineComponent({
       }
 
       localStorage.setItem("favorites", JSON.stringify(favorites.value));
+      filterArticles();
     };
 
     onMounted(() => {
       fetchArticles();
+      filterArticles();
     });
 
     return {
       searchQuery,
+      filter,
       articles,
+      filteredArticles,
       fetchArticles,
+      fetchFavorites,
+      filterArticles,
       handleInput,
       toggleFavorite,
     };
