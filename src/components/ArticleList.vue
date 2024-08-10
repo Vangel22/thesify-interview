@@ -9,7 +9,6 @@
         />
         <input
           v-model="searchQuery"
-          @input="handleInput"
           type="text"
           placeholder="Search for articles"
           :class="{
@@ -57,7 +56,7 @@
 
 <script lang="ts">
 import axios from "axios";
-import { defineComponent, onMounted, ref } from "vue";
+import { defineComponent, onMounted, ref, watch } from "vue";
 import ArticleCard from "./ArticleCard.vue";
 import NoData from "./NoData.vue";
 
@@ -96,38 +95,48 @@ export default defineComponent({
       const authorMatch = article.authors?.some((author) =>
         author.toLowerCase().includes(lowerCaseQuery)
       );
-      // here i have a problem with the date format,
-      // somehow the date for favorites is ISO string
-      // and the articles have new Date type string
-      const dateMatch = article.publicationDate
-        .toString()
+
+      const dateSetup = new Date(article.publicationDate);
+
+      const dateMatch = dateSetup
+        .toLocaleDateString()
         .toLowerCase()
         .includes(lowerCaseQuery);
 
+      console.log(`article ${article.title} date match ${dateMatch}`);
       return titleMatch || authorMatch || dateMatch;
     };
 
     const fetchArticles = async () => {
-      const query = searchQuery.value.trim().toLowerCase();
-      const res = await axios.get(
-        `https://api.openalex.org/works?search=${encodeURIComponent(query)}`
-      );
-      const dataFetched = res.data.results.map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        abstract: item.abstract ?? "No abstract available.",
-        concepts: item.concepts
-          ? item.concepts.map((concept: Concept) => concept.display_name)
-          : [],
-        authors: item.authorships
-          ? item.authorships.map((data: any) => data.author.display_name)
-          : [],
-        publicationDate: new Date(item.publication_date),
-        isFavorite: favorites.value.some((fav: Article) => fav.id === item.id), // if found in favorites i toggle it here
-      }));
+      try {
+        const query = searchQuery.value.trim().toLowerCase();
+        const res = await axios.get(
+          `https://api.openalex.org/works?search=${encodeURIComponent(query)}`
+        );
+        const dataFetched = res.data.results
+          .map((item: Partial<Article | any>) => ({
+            id: item.id,
+            title: item.title,
+            abstract: item.abstract ?? "No abstract available.",
+            concepts: item.concepts
+              ? item.concepts.map((concept: Concept) => concept.display_name)
+              : [],
+            authors: item.authorships
+              ? item.authorships.map((data: any) => data.author.display_name)
+              : [],
+            publicationDate: new Date(item.publication_date),
+            isFavorite: favorites.value.some(
+              (fav: Article) => fav.id === item.id
+            ),
+          }))
+          .sort((a: Article, b: Article) => {
+            return b.publicationDate.getTime() - a.publicationDate.getTime();
+          });
 
-      articles.value = dataFetched;
-      filterArticles(); // display the data according to the filter
+        articles.value = dataFetched;
+      } catch (error) {
+        console.error("Failed to fetch articles:", error);
+      }
     };
 
     const fetchFavorites = () => {
@@ -153,20 +162,13 @@ export default defineComponent({
       }
     };
 
-    const handleInput = () => {
-      fetchArticles();
-    };
-
     const toggleFavorite = (articleId: string) => {
-      // this articleId is for the clicked article
       const articleIndex = articles.value.findIndex(
         (article: Article) => article.id === articleId
       );
       const foundArticle = articles.value[articleIndex];
       if (articleIndex !== -1) {
-        // this means article was not found
         articles.value[articleIndex].isFavorite = !foundArticle.isFavorite;
-        // make the status of the article as favorite or not
 
         if (foundArticle.isFavorite) {
           favorites.value.push(foundArticle);
@@ -186,6 +188,14 @@ export default defineComponent({
       filterArticles();
     });
 
+    watch([filter, articles], () => {
+      filterArticles();
+    });
+
+    watch(searchQuery, () => {
+      fetchArticles();
+    });
+
     return {
       searchQuery,
       filter,
@@ -194,7 +204,6 @@ export default defineComponent({
       fetchArticles,
       fetchFavorites,
       filterArticles,
-      handleInput,
       toggleFavorite,
     };
   },
