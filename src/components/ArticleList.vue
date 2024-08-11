@@ -103,7 +103,6 @@ export default defineComponent({
         .toLowerCase()
         .includes(lowerCaseQuery);
 
-      console.log(`article ${article.title} date match ${dateMatch}`);
       return titleMatch || authorMatch || dateMatch;
     };
 
