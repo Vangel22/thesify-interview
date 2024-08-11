@@ -41,7 +41,7 @@
         <div class="flex flex-col h-full">
           <ArticleCard
             :id="article.id"
-            :title="article.title"
+            :title="article.title ?? 'Untitled'"
             :summary="article.abstract"
             :authors="article.authors"
             :concepts="article.concepts.slice(0, 6)"
@@ -179,7 +179,7 @@ export default defineComponent({
       }
 
       localStorage.setItem("favorites", JSON.stringify(favorites.value));
-      filterArticles();
+      // filterArticles();
     };
 
     onMounted(() => {
@@ -187,7 +187,7 @@ export default defineComponent({
       filterArticles();
     });
 
-    watch([filter, articles], () => {
+    watch([filter, articles, toggleFavorite], () => {
       filterArticles();
     });
 
